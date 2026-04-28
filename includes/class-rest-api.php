@@ -97,8 +97,17 @@ class Lexical_Lode_REST_API {
 		$post_id = $request->get_param( 'post_id' );
 
 		// Authenticated editors can scramble any (non-excluded) post — they're in the block editor.
-		// Unauthenticated users can only scramble post IDs that are in active live-mode blocks.
+		// Unauthenticated users must pass through the live-mode gate and post-ID allowlist.
 		if ( ! current_user_can( 'edit_posts' ) ) {
+			// Site-wide kill switch — if live mode is off, reject immediately.
+			if ( ! Lexical_Lode_Settings::is_live_mode_allowed() ) {
+				return new WP_Error(
+					'live_mode_disabled',
+					__( 'Live mode is not enabled on this site.', 'lexical-lode' ),
+					array( 'status' => 403 )
+				);
+			}
+
 			if ( ! Lexical_Lode_Block::is_live_post_id( $post_id ) ) {
 				return new WP_Error(
 					'invalid_post',
@@ -106,6 +115,21 @@ class Lexical_Lode_REST_API {
 					array( 'status' => 403 )
 				);
 			}
+
+			// Soft rate limit for unauthenticated requests — courtesy fallback
+			// for hosts without server-level throttling. Not a substitute for
+			// Nginx/Cloudflare rate limiting on production sites.
+			$ip  = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
+			$key = 'lexical_lode_rate_' . md5( $ip );
+			$hits = (int) get_transient( $key );
+			if ( $hits >= 30 ) {
+				return new WP_Error(
+					'rate_limited',
+					__( 'Too many requests. Please try again shortly.', 'lexical-lode' ),
+					array( 'status' => 429 )
+				);
+			}
+			set_transient( $key, $hits + 1, MINUTE_IN_SECONDS );
 		}
 
 		// Always validate against category/tag exclusions.
@@ -119,13 +143,7 @@ class Lexical_Lode_REST_API {
 			);
 		}
 
-		return new WP_REST_Response(
-			array(
-				'post_id' => $post_id,
-				'phrase'  => $phrase,
-			),
-			200
-		);
+		return new WP_REST_Response( array( 'phrase' => $phrase ), 200 );
 	}
 
 	/**

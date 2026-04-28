@@ -23,10 +23,11 @@ class Lexical_Lode_Block {
 		// Pass settings data to the block editor.
 		add_action( 'enqueue_block_editor_assets', array( __CLASS__, 'enqueue_editor_data' ) );
 
-		// Refresh the live-ID registry when a post is saved — this keeps it
-		// accurate regardless of whether the block's render callback runs
-		// (e.g. on cached pages).
+		// Rebuild the live-ID registry when posts change — keeps it accurate
+		// and pruned regardless of whether the block's render callback runs.
 		add_action( 'save_post', array( __CLASS__, 'sync_live_ids_on_save' ), 10, 2 );
+		add_action( 'delete_post', array( __CLASS__, 'prune_live_ids_on_delete' ) );
+		add_action( 'transition_post_status', array( __CLASS__, 'prune_live_ids_on_unpublish' ), 10, 3 );
 	}
 
 	/**
@@ -67,6 +68,15 @@ class Lexical_Lode_Block {
 		$mode        = $attributes['mode'] ?? 'locked';
 		$attribution = $attributes['attribution'] ?? 'hidden';
 
+		// Normalize lines — enforce types and filter out invalid entries.
+		$lines = array_map( function( $line ) {
+			return array(
+				'post_id' => isset( $line['post_id'] ) ? (int) $line['post_id'] : 0,
+				'phrase'  => isset( $line['phrase'] ) ? (string) $line['phrase'] : '',
+			);
+		}, $lines );
+		$lines = array_values( array_filter( $lines, fn( $l ) => $l['post_id'] > 0 && '' !== $l['phrase'] ) );
+
 		// Validate format against allowed list.
 		$valid_formats = array_keys( Lexical_Lode_Settings::FORMATS );
 		if ( ! in_array( $format, $valid_formats, true ) ) {
@@ -91,11 +101,8 @@ class Lexical_Lode_Block {
 			return '';
 		}
 
-		// Register post IDs from live-mode blocks so the scramble endpoint
-		// can validate that a given post ID is actually in use.
-		if ( 'live' === $mode ) {
-			self::register_live_post_ids( $lines );
-		}
+		// Live-ID registry is maintained via the save_post hook
+		// (sync_live_ids_on_save), not at render time.
 
 		$wrapper_attrs = get_block_wrapper_attributes( array(
 			'class'          => 'lexical-lode-block lexical-lode-format-' . esc_attr( $format ),
@@ -247,26 +254,21 @@ class Lexical_Lode_Block {
 	}
 
 	/**
-	 * Add post IDs to the live-ID registry.
-	 * Called from the render path — acts as a belt-and-suspenders update
-	 * alongside the save_post hook.
+	 * Rebuild the global live-ID registry from all per-post meta entries.
 	 */
-	private static function register_live_post_ids( $lines ) {
-		$existing = get_option( self::LIVE_IDS_OPTION, array() );
-		if ( ! is_array( $existing ) ) {
-			$existing = array();
+	private static function rebuild_live_ids_option() {
+		global $wpdb;
+		$rows = $wpdb->get_col(
+			"SELECT meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_lexical_lode_live_ids'"
+		);
+		$all = array();
+		foreach ( $rows as $row ) {
+			$decoded = maybe_unserialize( $row );
+			if ( is_array( $decoded ) ) {
+				$all = array_merge( $all, $decoded );
+			}
 		}
-
-		$new_ids = $existing;
-		foreach ( $lines as $line ) {
-			$new_ids[] = (int) $line['post_id'];
-		}
-		$new_ids = array_values( array_unique( $new_ids ) );
-
-		// Only write if the set actually changed.
-		if ( $new_ids !== $existing ) {
-			update_option( self::LIVE_IDS_OPTION, $new_ids, false );
-		}
+		update_option( self::LIVE_IDS_OPTION, array_values( array_unique( array_map( 'intval', $all ) ) ), false );
 	}
 
 	/**
@@ -285,8 +287,9 @@ class Lexical_Lode_Block {
 
 	/**
 	 * On save_post, scan the saved post's content for live-mode Lexical Lode
-	 * blocks and register the post IDs they reference. Ensures the live-ID
-	 * registry stays accurate even when render callbacks don't run (cached pages).
+	 * blocks, store the referenced post IDs as post meta, and rebuild the
+	 * global live-ID registry. This ensures stale IDs are pruned when blocks
+	 * are removed or switched away from live mode.
 	 *
 	 * @param int     $post_id The saved post ID.
 	 * @param WP_Post $post    The post object.
@@ -297,14 +300,49 @@ class Lexical_Lode_Block {
 		}
 
 		if ( empty( $post->post_content ) || ! has_blocks( $post->post_content ) ) {
+			delete_post_meta( $post_id, '_lexical_lode_live_ids' );
+			self::rebuild_live_ids_option();
 			return;
 		}
 
 		$blocks = parse_blocks( $post->post_content );
 		$lines  = self::collect_live_lines_from_blocks( $blocks );
+		$ids    = array_values( array_unique( array_map( fn( $l ) => (int) $l['post_id'], $lines ) ) );
 
-		if ( ! empty( $lines ) ) {
-			self::register_live_post_ids( $lines );
+		if ( ! empty( $ids ) ) {
+			update_post_meta( $post_id, '_lexical_lode_live_ids', $ids );
+		} else {
+			delete_post_meta( $post_id, '_lexical_lode_live_ids' );
+		}
+
+		self::rebuild_live_ids_option();
+	}
+
+	/**
+	 * When a post is deleted, remove its live-ID meta and rebuild.
+	 *
+	 * @param int $post_id The deleted post ID.
+	 */
+	public static function prune_live_ids_on_delete( $post_id ) {
+		if ( get_post_meta( $post_id, '_lexical_lode_live_ids', true ) ) {
+			delete_post_meta( $post_id, '_lexical_lode_live_ids' );
+			self::rebuild_live_ids_option();
+		}
+	}
+
+	/**
+	 * When a post is unpublished, prune its live IDs from the registry.
+	 *
+	 * @param string  $new_status New post status.
+	 * @param string  $old_status Old post status.
+	 * @param WP_Post $post       The post object.
+	 */
+	public static function prune_live_ids_on_unpublish( $new_status, $old_status, $post ) {
+		if ( 'publish' === $old_status && 'publish' !== $new_status ) {
+			if ( get_post_meta( $post->ID, '_lexical_lode_live_ids', true ) ) {
+				delete_post_meta( $post->ID, '_lexical_lode_live_ids' );
+				self::rebuild_live_ids_option();
+			}
 		}
 	}
 

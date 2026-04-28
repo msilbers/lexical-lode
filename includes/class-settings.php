@@ -101,7 +101,7 @@ class Lexical_Lode_Settings {
 		$allowed = self::is_live_mode_allowed();
 		printf(
 			'<label><input type="checkbox" name="lexical_lode_allow_live_mode" value="1" %s> %s</label>',
-			$allowed ? 'checked' : '',
+			checked( $allowed, true, false ),
 			esc_html__( 'Allow blocks to be set to live mode, so site visitors can scramble phrases themselves.', 'lexical-lode' )
 		);
 		echo '<p class="description">' . esc_html__( 'When disabled, new and existing blocks render in locked mode regardless of how they were saved.', 'lexical-lode' ) . '</p>';
@@ -120,11 +120,10 @@ class Lexical_Lode_Settings {
 			$enabled = array_keys( self::FORMATS );
 		}
 		foreach ( self::FORMATS as $key => $label ) {
-			$checked = in_array( $key, $enabled, true ) ? 'checked' : '';
 			printf(
 				'<label><input type="checkbox" name="lexical_lode_enabled_formats[]" value="%s" %s> %s</label><br>',
 				esc_attr( $key ),
-				$checked,
+				checked( in_array( $key, $enabled, true ), true, false ),
 				esc_html( $label )
 			);
 		}
@@ -137,11 +136,10 @@ class Lexical_Lode_Settings {
 		}
 		$categories = get_categories( array( 'hide_empty' => false ) );
 		foreach ( $categories as $cat ) {
-			$checked = in_array( $cat->term_id, $excluded, true ) ? 'checked' : '';
 			printf(
 				'<label><input type="checkbox" name="lexical_lode_excluded_categories[]" value="%d" %s> %s</label><br>',
 				$cat->term_id,
-				$checked,
+				checked( in_array( $cat->term_id, $excluded, true ), true, false ),
 				esc_html( $cat->name )
 			);
 		}
@@ -158,11 +156,10 @@ class Lexical_Lode_Settings {
 		$tags = get_tags( array( 'hide_empty' => false ) );
 		if ( $tags ) {
 			foreach ( $tags as $tag ) {
-				$checked = in_array( $tag->term_id, $excluded, true ) ? 'checked' : '';
 				printf(
 					'<label><input type="checkbox" name="lexical_lode_excluded_tags[]" value="%d" %s> %s</label><br>',
 					$tag->term_id,
-					$checked,
+					checked( in_array( $tag->term_id, $excluded, true ), true, false ),
 					esc_html( $tag->name )
 				);
 			}
@@ -200,7 +197,7 @@ class Lexical_Lode_Settings {
 		if ( ! is_array( $input ) ) {
 			return array();
 		}
-		return array_map( 'absint', $input );
+		return array_values( array_filter( array_map( 'absint', $input ) ) );
 	}
 
 	/**

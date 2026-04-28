@@ -29,11 +29,7 @@ add_action( 'admin_menu', 'lexical_lode_admin_menu' );
 add_action( 'admin_init', 'lexical_lode_register_settings' );
 
 function lexical_lode_init() {
-	load_plugin_textdomain(
-		'lexical-lode',
-		false,
-		dirname( plugin_basename( __FILE__ ) ) . '/languages/'
-	);
+	load_plugin_textdomain( 'lexical-lode' );
 	Lexical_Lode_Block::register();
 }
 

@@ -45,7 +45,7 @@ lexical_lode_delete_site_data();
 
 // Multisite: clean up across all sites in the network.
 if ( is_multisite() ) {
-	$site_ids = get_sites( array( 'fields' => 'ids' ) );
+	$site_ids = get_sites( array( 'fields' => 'ids', 'number' => 0 ) );
 	foreach ( $site_ids as $site_id ) {
 		switch_to_blog( $site_id );
 		lexical_lode_delete_site_data();

@@ -57,7 +57,7 @@ class Lexical_Lode_Phrase_Extractor {
 	 */
 	public static function split_into_phrases( $text ) {
 		// Split on period, comma, semicolon, em dash (—), and en dash (–).
-		$fragments = preg_split( '/[.,;]|—|–/u', $text );
+		$fragments = preg_split( '/[.,;!?]|—|–/u', $text );
 
 		$phrases = array();
 		foreach ( $fragments as $fragment ) {
@@ -69,6 +69,9 @@ class Lexical_Lode_Phrase_Extractor {
 			// Use Unicode-aware word counting: match runs of letters in any script.
 			// This is consistent across server locales and handles non-ASCII text correctly.
 			$word_count = preg_match_all( '/\pL+/u', $fragment );
+			if ( false === $word_count ) {
+				continue;
+			}
 			if ( $word_count >= self::MIN_WORDS && $word_count <= self::MAX_WORDS ) {
 				$phrases[] = $fragment;
 			}
@@ -89,11 +92,40 @@ class Lexical_Lode_Phrase_Extractor {
 			return null;
 		}
 
-		$phrases = self::extract_from_post( $post_id );
+		$phrases = self::get_cached_phrases( $post_id );
 		if ( empty( $phrases ) ) {
 			return null;
 		}
 		return $phrases[ array_rand( $phrases ) ];
+	}
+
+	/**
+	 * Get phrases for a post, using a transient cache keyed by post ID and
+	 * content hash. Avoids re-parsing post content on every scramble request.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return array Array of phrase strings.
+	 */
+	public static function get_cached_phrases( $post_id ) {
+		$post = get_post( $post_id );
+		if ( ! $post || 'publish' !== $post->post_status ) {
+			return array();
+		}
+
+		$content_hash = md5( $post->post_content );
+		$cache_key    = 'lexical_lode_phrases_' . $post_id . '_' . substr( $content_hash, 0, 8 );
+		$cached       = get_transient( $cache_key );
+
+		if ( false !== $cached ) {
+			return $cached;
+		}
+
+		$content = self::strip_to_plaintext( $post->post_content );
+		$phrases = self::split_into_phrases( $content );
+
+		set_transient( $cache_key, $phrases, DAY_IN_SECONDS );
+
+		return $phrases;
 	}
 
 	/**
@@ -137,20 +169,9 @@ class Lexical_Lode_Phrase_Extractor {
 		$args = array(
 			'post_type'      => 'post',
 			'post_status'    => 'publish',
-			'posts_per_page' => $count * 3, // Fetch extra in case some have no usable phrases.
 			'post__not_in'   => $exclude_post_ids,
 			'fields'         => 'ids',
 		);
-
-		if ( 'newest' === $order ) {
-			$args['orderby'] = 'date';
-			$args['order']   = 'DESC';
-		} elseif ( 'oldest' === $order ) {
-			$args['orderby'] = 'date';
-			$args['order']   = 'ASC';
-		} else {
-			$args['orderby'] = 'rand';
-		}
 
 		if ( is_array( $excluded_cats ) && ! empty( $excluded_cats ) ) {
 			$args['category__not_in'] = $excluded_cats;
@@ -160,7 +181,34 @@ class Lexical_Lode_Phrase_Extractor {
 			$args['tag__not_in'] = $excluded_tags;
 		}
 
-		$post_ids = get_posts( $args );
+		if ( 'newest' === $order ) {
+			$args['orderby']        = 'date';
+			$args['order']          = 'DESC';
+			$args['posts_per_page'] = min( $count * 3, 100 );
+			$post_ids               = get_posts( $args );
+		} elseif ( 'oldest' === $order ) {
+			$args['orderby']        = 'date';
+			$args['order']          = 'ASC';
+			$args['posts_per_page'] = min( $count * 3, 100 );
+			$post_ids               = get_posts( $args );
+		} else {
+			// Avoid ORDER BY RAND() — cache qualifying IDs and randomize in PHP.
+			$cache_key = 'lexical_lode_id_pool_' . md5(
+				wp_json_encode( $excluded_cats ) . wp_json_encode( $excluded_tags ) . wp_json_encode( $exclude_post_ids )
+			);
+			$post_ids = get_transient( $cache_key );
+
+			if ( false === $post_ids ) {
+				$args['orderby']        = 'date';
+				$args['order']          = 'DESC';
+				$args['posts_per_page'] = 500;
+				$post_ids               = get_posts( $args );
+				set_transient( $cache_key, $post_ids, HOUR_IN_SECONDS );
+			}
+
+			shuffle( $post_ids );
+			$post_ids = array_slice( $post_ids, 0, $count * 3 );
+		}
 
 		// Filter to only posts that actually produce usable phrases.
 		$valid_posts = array();
