@@ -1,5 +1,5 @@
 === Lexical Lode ===
-Contributors: zeppo
+Contributors: dollissa
 Tags: poetry, generative, found poetry, creative writing, block editor
 Requires at least: 6.7
 Tested up to: 6.7
