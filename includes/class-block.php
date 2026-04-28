@@ -121,11 +121,25 @@ class Lexical_Lode_Block {
 
 		echo '</div>';
 
-		if ( 'live' === $mode ) {
+		if ( 'live' === $mode || 'hover' === $attribution ) {
 			self::enqueue_frontend_script();
 		}
 
 		return ob_get_clean();
+	}
+
+	/**
+	 * Get the title of a post, falling back to a placeholder for untitled posts.
+	 *
+	 * @param int $post_id The post ID.
+	 * @return string The post title or a placeholder string.
+	 */
+	private static function get_post_title( $post_id ) {
+		$title = get_the_title( $post_id );
+		if ( '' === $title ) {
+			$title = __( '[No Title]', 'lexical-lode' );
+		}
+		return $title;
 	}
 
 	/**
@@ -142,8 +156,9 @@ class Lexical_Lode_Block {
 
 			$hover_attr = '';
 			if ( 'hover' === $attribution ) {
-				$title      = get_the_title( $line['post_id'] );
-				$hover_attr = ' title="' . esc_attr( $title ) . '"';
+				$title = self::get_post_title( $line['post_id'] );
+				$url   = get_permalink( $line['post_id'] );
+				$hover_attr = ' data-post-title="' . esc_attr( $title ) . '" data-post-url="' . esc_attr( $url ) . '"';
 			}
 
 			echo '<div class="lexical-lode-line"' . $hover_attr . ' data-post-id="' . esc_attr( $line['post_id'] ) . '">';
@@ -166,8 +181,9 @@ class Lexical_Lode_Block {
 		foreach ( $lines as $index => $line ) {
 			$hover_attr = '';
 			if ( 'hover' === $attribution ) {
-				$title      = get_the_title( $line['post_id'] );
-				$hover_attr = ' title="' . esc_attr( $title ) . '"';
+				$title = self::get_post_title( $line['post_id'] );
+				$url   = get_permalink( $line['post_id'] );
+				$hover_attr = ' data-post-title="' . esc_attr( $title ) . '" data-post-url="' . esc_attr( $url ) . '"';
 			}
 
 			echo '<span class="lexical-lode-phrase" data-post-id="' . esc_attr( $line['post_id'] ) . '"' . $hover_attr . '>' . esc_html( $line['phrase'] ) . '</span>';
@@ -191,8 +207,9 @@ class Lexical_Lode_Block {
 		foreach ( $lines as $line ) {
 			$hover_attr = '';
 			if ( 'hover' === $attribution ) {
-				$title      = get_the_title( $line['post_id'] );
-				$hover_attr = ' title="' . esc_attr( $title ) . '"';
+				$title = self::get_post_title( $line['post_id'] );
+				$url   = get_permalink( $line['post_id'] );
+				$hover_attr = ' data-post-title="' . esc_attr( $title ) . '" data-post-url="' . esc_attr( $url ) . '"';
 			}
 
 			echo '<li class="lexical-lode-line"' . $hover_attr . ' data-post-id="' . esc_attr( $line['post_id'] ) . '">';
@@ -215,13 +232,17 @@ class Lexical_Lode_Block {
 		foreach ( $lines as $line ) {
 			$post_id = $line['post_id'];
 			if ( ! isset( $sources[ $post_id ] ) ) {
-				$sources[ $post_id ] = get_the_title( $post_id );
+				$sources[ $post_id ] = self::get_post_title( $post_id );
 			}
 		}
 
 		echo '<footer class="lexical-lode-sources"><p>';
 		echo esc_html__( 'Sources: ', 'lexical-lode' );
-		echo esc_html( implode( ', ', array_values( $sources ) ) );
+		$links = array();
+		foreach ( $sources as $post_id => $title ) {
+			$links[] = '<a href="' . esc_url( get_permalink( $post_id ) ) . '">' . esc_html( $title ) . '</a>';
+		}
+		echo implode( ', ', $links ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '</p></footer>';
 	}
 
