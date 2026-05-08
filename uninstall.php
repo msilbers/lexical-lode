@@ -29,8 +29,8 @@ function lexical_lode_delete_site_data() {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.NotPrepared
 	$wpdb->query(
 		"DELETE FROM {$wpdb->options}
-		 WHERE option_name LIKE '_transient_lexical_lode_live_ids_%'
-		    OR option_name LIKE '_transient_timeout_lexical_lode_live_ids_%'"
+		 WHERE option_name LIKE '_transient_lexical_lode_%'
+		    OR option_name LIKE '_transient_timeout_lexical_lode_%'"
 	);
 }
 

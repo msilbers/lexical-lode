@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 /**
  * Gutenberg block registration and server-side rendering for Lexical Lode.
  */
@@ -30,6 +33,9 @@ class Lexical_Lode_Block {
 	 * Make plugin settings available to the block editor JS.
 	 */
 	public static function enqueue_editor_data() {
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return;
+		}
 		$formats = Lexical_Lode_Settings::get_enabled_formats();
 		wp_add_inline_script(
 			self::get_editor_script_handle(),
@@ -84,7 +90,7 @@ class Lexical_Lode_Block {
 
 		ob_start();
 		// $wrapper_attrs is returned pre-escaped by get_block_wrapper_attributes().
-		echo '<div ' . $wrapper_attrs . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<section aria-label="' . esc_attr__( 'Found poem', 'lexical-lode' ) . '" ' . $wrapper_attrs . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		if ( 'prose' === $format ) {
 			self::render_prose( $lines, $attribution );
@@ -98,7 +104,7 @@ class Lexical_Lode_Block {
 			self::render_attribution_footnotes( $lines );
 		}
 
-		echo '</div>';
+		echo '</section>';
 
 		if ( 'hover' === $attribution ) {
 			self::enqueue_frontend_script();

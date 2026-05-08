@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 /**
  * Plugin settings page for Lexical Lode.
  */
@@ -81,6 +84,7 @@ class Lexical_Lode_Settings {
 		if ( ! is_array( $enabled ) ) {
 			$enabled = array_keys( self::FORMATS );
 		}
+		echo '<fieldset><legend class="screen-reader-text">' . esc_html__( 'Enabled formats', 'lexical-lode' ) . '</legend>';
 		foreach ( self::FORMATS as $key => $label ) {
 			printf(
 				'<label><input type="checkbox" name="lexical_lode_enabled_formats[]" value="%s" %s> %s</label><br>',
@@ -89,6 +93,7 @@ class Lexical_Lode_Settings {
 				esc_html( $label )
 			);
 		}
+		echo '</fieldset>';
 	}
 
 	public static function render_categories_field() {
@@ -97,6 +102,7 @@ class Lexical_Lode_Settings {
 			$excluded = array();
 		}
 		$categories = get_categories( array( 'hide_empty' => false ) );
+		echo '<fieldset><legend class="screen-reader-text">' . esc_html__( 'Excluded categories', 'lexical-lode' ) . '</legend>';
 		foreach ( $categories as $cat ) {
 			printf(
 				'<label><input type="checkbox" name="lexical_lode_excluded_categories[]" value="%d" %s> %s</label><br>',
@@ -108,6 +114,7 @@ class Lexical_Lode_Settings {
 		if ( empty( $categories ) ) {
 			echo '<p>' . esc_html__( 'No categories found.', 'lexical-lode' ) . '</p>';
 		}
+		echo '</fieldset>';
 	}
 
 	public static function render_tags_field() {
@@ -116,6 +123,7 @@ class Lexical_Lode_Settings {
 			$excluded = array();
 		}
 		$tags = get_tags( array( 'hide_empty' => false ) );
+		echo '<fieldset><legend class="screen-reader-text">' . esc_html__( 'Excluded tags', 'lexical-lode' ) . '</legend>';
 		if ( $tags ) {
 			foreach ( $tags as $tag ) {
 				printf(
@@ -128,6 +136,7 @@ class Lexical_Lode_Settings {
 		} else {
 			echo '<p>' . esc_html__( 'No tags found.', 'lexical-lode' ) . '</p>';
 		}
+		echo '</fieldset>';
 	}
 
 	public static function render_page() {
@@ -150,7 +159,7 @@ class Lexical_Lode_Settings {
 
 	public static function sanitize_formats( $input ) {
 		if ( ! is_array( $input ) ) {
-			return array_keys( self::FORMATS );
+			return array();
 		}
 		return array_intersect( $input, array_keys( self::FORMATS ) );
 	}

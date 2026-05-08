@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 /**
  * Extracts usable phrases from WordPress post content.
  */
@@ -112,8 +115,8 @@ class Lexical_Lode_Phrase_Extractor {
 			return array();
 		}
 
-		$content_hash = md5( $post->post_content );
-		$cache_key    = 'lexical_lode_phrases_' . $post_id . '_' . substr( $content_hash, 0, 8 );
+		$modified  = strtotime( $post->post_modified_gmt );
+		$cache_key = 'lexical_lode_phrases_' . $post_id . '_' . $modified;
 		$cached       = get_transient( $cache_key );
 
 		if ( false !== $cached ) {
@@ -213,7 +216,7 @@ class Lexical_Lode_Phrase_Extractor {
 		// Filter to only posts that actually produce usable phrases.
 		$valid_posts = array();
 		foreach ( $post_ids as $post_id ) {
-			$phrases = self::extract_from_post( $post_id );
+			$phrases = self::get_cached_phrases( $post_id );
 			if ( ! empty( $phrases ) ) {
 				$valid_posts[] = $post_id;
 			}
