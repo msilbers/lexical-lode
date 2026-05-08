@@ -31,11 +31,6 @@ class Lexical_Lode_Settings {
 			'sanitize_callback' => array( __CLASS__, 'sanitize_ids' ),
 		) );
 
-		register_setting( 'lexical_lode_settings', 'lexical_lode_allow_live_mode', array(
-			'type'              => 'boolean',
-			'default'           => false,
-			'sanitize_callback' => 'rest_sanitize_boolean',
-		) );
 
 		add_settings_section(
 			'lexical_lode_formats_section',
@@ -79,39 +74,6 @@ class Lexical_Lode_Settings {
 			'lexical_lode_exclusions_section'
 		);
 
-		add_settings_section(
-			'lexical_lode_behavior_section',
-			__( 'Behavior', 'lexical-lode' ),
-			function () {
-				echo '<p>' . esc_html__( 'Control how blocks behave for site visitors.', 'lexical-lode' ) . '</p>';
-			},
-			'lexical-lode'
-		);
-
-		add_settings_field(
-			'lexical_lode_allow_live_mode',
-			__( 'Allow live mode', 'lexical-lode' ),
-			array( __CLASS__, 'render_allow_live_mode_field' ),
-			'lexical-lode',
-			'lexical_lode_behavior_section'
-		);
-	}
-
-	public static function render_allow_live_mode_field() {
-		$allowed = self::is_live_mode_allowed();
-		printf(
-			'<label><input type="checkbox" name="lexical_lode_allow_live_mode" value="1" %s> %s</label>',
-			checked( $allowed, true, false ),
-			esc_html__( 'Allow blocks to be set to live mode, so site visitors can scramble phrases themselves.', 'lexical-lode' )
-		);
-		echo '<p class="description">' . esc_html__( 'When disabled, new and existing blocks render in locked mode regardless of how they were saved.', 'lexical-lode' ) . '</p>';
-	}
-
-	/**
-	 * Whether live mode is permitted site-wide.
-	 */
-	public static function is_live_mode_allowed() {
-		return (bool) get_option( 'lexical_lode_allow_live_mode', false );
 	}
 
 	public static function render_formats_field() {

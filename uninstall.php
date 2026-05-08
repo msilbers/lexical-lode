@@ -19,18 +19,12 @@ function lexical_lode_delete_site_data() {
 	delete_option( 'lexical_lode_enabled_formats' );
 	delete_option( 'lexical_lode_excluded_categories' );
 	delete_option( 'lexical_lode_excluded_tags' );
+
+	// Legacy options from earlier versions.
 	delete_option( 'lexical_lode_allow_live_mode' );
-
-	// Live-ID registry — stored as a persistent option in current builds.
 	delete_option( 'lexical_lode_live_ids' );
-
-	// Legacy: the live-IDs tracker was previously a site transient.
 	delete_site_transient( 'lexical_lode_live_ids' );
 
-	// Legacy: very early builds used per-page transients with a suffix.
-	// Clean any up so no orphan rows remain. The LIKE pattern is fully
-	// hardcoded — no user input is interpolated — so $wpdb->prepare is
-	// not required here.
 	global $wpdb;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.NotPrepared
 	$wpdb->query(
