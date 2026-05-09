@@ -1,0 +1,55 @@
+.lexical-lode-format-picker {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.lexical-lode-loading {
+	text-align: center;
+	padding: 24px;
+}
+
+.lexical-lode-editor-preview {
+	.lexical-lode-line {
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+		padding: 2px 0;
+	}
+
+	.lexical-lode-stanza-break {
+		height: 1em;
+	}
+
+	.lexical-lode-phrase-wrapper {
+		display: inline;
+	}
+
+	.lexical-lode-scramble-btn {
+		background: none;
+		border: 1px solid #ddd;
+		border-radius: 3px;
+		cursor: pointer;
+		font-size: 14px;
+		line-height: 1;
+		padding: 2px 4px;
+		opacity: 0.4;
+		transition: opacity 0.15s;
+		flex-shrink: 0;
+
+		&:hover {
+			opacity: 1;
+			border-color: #007cba;
+		}
+	}
+
+	.lexical-lode-list {
+		padding-left: 1.5em;
+
+		.lexical-lode-line {
+			list-style: decimal;
+			display: list-item;
+		}
+	}
+}

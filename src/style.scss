@@ -1,0 +1,49 @@
+// Frontend styles — minimal, inherits theme typography.
+
+.lexical-lode-block {
+	.lexical-lode-line {
+		padding: 2px 0;
+	}
+
+	.lexical-lode-stanza-break {
+		height: 1em;
+	}
+
+	.lexical-lode-prose {
+		.lexical-lode-phrase {
+			display: inline;
+		}
+	}
+
+	.lexical-lode-list {
+		padding-left: 1.5em;
+	}
+
+	.lexical-lode-scramble {
+		background: none;
+		border: 1px solid currentColor;
+		border-radius: 3px;
+		cursor: pointer;
+		font-size: 0.75em;
+		line-height: 1;
+		padding: 2px 4px;
+		opacity: 0.3;
+		transition: opacity 0.15s;
+		margin-left: 0.5em;
+
+		&:hover {
+			opacity: 1;
+		}
+
+		&:disabled {
+			cursor: wait;
+			opacity: 0.15;
+		}
+	}
+
+	.lexical-lode-sources {
+		margin-top: 1em;
+		font-size: 0.85em;
+		opacity: 0.6;
+	}
+}

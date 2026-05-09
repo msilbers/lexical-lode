@@ -11,7 +11,7 @@
   "attributes": {
     "format": {
       "type": "string",
-      "default": "free_verse"
+      "default": ""
     },
     "lines": {
       "type": "array",
