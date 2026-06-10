@@ -70,7 +70,7 @@ class Lexical_Lode_Block {
 		$lines = array_values( array_filter( $lines, fn( $l ) => $l['post_id'] > 0 && '' !== $l['phrase'] ) );
 
 		// Validate format against allowed list.
-		$valid_formats = array_keys( Lexical_Lode_Settings::FORMATS );
+		$valid_formats = Lexical_Lode_Settings::get_format_keys();
 		if ( ! in_array( $format, $valid_formats, true ) ) {
 			$format = 'free_verse';
 		}

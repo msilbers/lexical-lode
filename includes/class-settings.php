@@ -7,18 +7,34 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Lexical_Lode_Settings {
 
-	const FORMATS = array(
-		'sonnet'     => 'Sonnet',
-		'free_verse' => 'Free Verse',
-		'couplets'   => 'Couplets',
-		'prose'      => 'Prose Paragraph',
-		'list'       => 'List / Aphorisms',
-	);
+	/**
+	 * Get all formats with translated labels.
+	 *
+	 * @return array<string, string> Map of format key => translated label.
+	 */
+	public static function get_formats() {
+		return array(
+			'sonnet'     => __( 'Sonnet', 'lexical-lode' ),
+			'free_verse' => __( 'Free Verse', 'lexical-lode' ),
+			'couplets'   => __( 'Couplets', 'lexical-lode' ),
+			'prose'      => __( 'Prose Paragraph', 'lexical-lode' ),
+			'list'       => __( 'List / Aphorisms', 'lexical-lode' ),
+		);
+	}
+
+	/**
+	 * Get all valid format keys (without labels).
+	 *
+	 * @return string[]
+	 */
+	public static function get_format_keys() {
+		return array_keys( self::get_formats() );
+	}
 
 	public static function register() {
 		register_setting( 'lexical_lode_settings', 'lexical_lode_enabled_formats', array(
 			'type'              => 'array',
-			'default'           => array_keys( self::FORMATS ),
+			'default'           => self::get_format_keys(),
 			'sanitize_callback' => array( __CLASS__, 'sanitize_formats' ),
 		) );
 
@@ -80,12 +96,12 @@ class Lexical_Lode_Settings {
 	}
 
 	public static function render_formats_field() {
-		$enabled = get_option( 'lexical_lode_enabled_formats', array_keys( self::FORMATS ) );
+		$enabled = get_option( 'lexical_lode_enabled_formats', self::get_format_keys() );
 		if ( ! is_array( $enabled ) ) {
-			$enabled = array_keys( self::FORMATS );
+			$enabled = self::get_format_keys();
 		}
 		echo '<fieldset><legend class="screen-reader-text">' . esc_html__( 'Enabled formats', 'lexical-lode' ) . '</legend>';
-		foreach ( self::FORMATS as $key => $label ) {
+		foreach ( self::get_formats() as $key => $label ) {
 			printf(
 				'<label><input type="checkbox" name="lexical_lode_enabled_formats[]" value="%s" %s> %s</label><br>',
 				esc_attr( $key ),
@@ -161,7 +177,7 @@ class Lexical_Lode_Settings {
 		if ( ! is_array( $input ) ) {
 			return array();
 		}
-		return array_intersect( $input, array_keys( self::FORMATS ) );
+		return array_intersect( $input, self::get_format_keys() );
 	}
 
 	public static function sanitize_ids( $input ) {
@@ -175,16 +191,17 @@ class Lexical_Lode_Settings {
 	 * Get enabled formats for use in the block editor.
 	 */
 	public static function get_enabled_formats() {
-		$enabled = get_option( 'lexical_lode_enabled_formats', array_keys( self::FORMATS ) );
+		$enabled      = get_option( 'lexical_lode_enabled_formats', self::get_format_keys() );
 		if ( ! is_array( $enabled ) ) {
-			$enabled = array_keys( self::FORMATS );
+			$enabled = self::get_format_keys();
 		}
-		$formats = array();
+		$all_formats = self::get_formats();
+		$formats     = array();
 		foreach ( $enabled as $key ) {
-			if ( isset( self::FORMATS[ $key ] ) ) {
+			if ( isset( $all_formats[ $key ] ) ) {
 				$formats[] = array(
 					'value' => $key,
-					'label' => self::FORMATS[ $key ],
+					'label' => $all_formats[ $key ],
 				);
 			}
 		}
